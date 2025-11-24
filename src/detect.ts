@@ -6,10 +6,12 @@ import { FSWatcher } from 'chokidar';
 import * as tmp from 'tmp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import { type predictionType } from 'nsfwjs';
-import { detectSensitive } from './ai.js';
+import { AiService } from './ai.js';
 import { isMimeImage } from './file-info.js';
 
 export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
+  const aiService = await AiService.getInstance();
+
   let sensitive = false;
   let porn = false;
 
@@ -36,7 +38,7 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
       .png()
       .toBuffer();
 
-    const result = await detectSensitive(png.buffer);
+    const result = await aiService.detectSensitive(png.buffer);
     if (result) {
       [sensitive, porn] = judgePrediction(result);
     }
@@ -79,7 +81,7 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
           targetIndex = nextIndex;
           nextIndex += index; // fibonacci sequence によってフレーム数制限を掛ける
           const frameBuffer = await fs.promises.readFile(path);
-          const result = await detectSensitive(frameBuffer.buffer);
+          const result = await aiService.detectSensitive(frameBuffer.buffer);
           if (result) {
             results.push(judgePrediction(result));
           }
