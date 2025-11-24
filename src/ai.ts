@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
+import * as tf from '@tensorflow/tfjs-node';
 import * as nsfw from 'nsfwjs';
 import si from 'systeminformation';
 import { Mutex } from 'async-mutex';
@@ -24,8 +25,6 @@ export async function detectSensitive(buffer: ArrayBuffer): Promise<nsfw.predict
       console.error('CPU does not support required instructions');
       return null;
     }
-
-    const tf = await import('@tensorflow/tfjs-node');
 
     if (model == null) {
       await modelLoadMutex.runExclusive(async () => {
