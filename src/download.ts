@@ -27,7 +27,7 @@ export async function downloadUrl(url: string, settings: DownloadConfig = defaul
   }
 
   if (!res.ok) {
-    throw new StatusError(`Target resource could not be fetched (Received status: ${res.status})`, 404);
+    throw new StatusError(`Target resource could not be fetched (Received status: ${res.status}, target: ${url})`, 404);
   }
 
   const contentLength = res.headers.get('content-length');
