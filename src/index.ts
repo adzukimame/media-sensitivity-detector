@@ -1,5 +1,7 @@
-// import { Hono } from 'hono';
-import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
+import type { Handler } from 'aws-lambda';
+import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { handle } from 'hono/aws-lambda';
+
 import { detectType } from './file-info.js';
 import { downloadUrl } from './download.js';
 import { detectSensitivity } from './detect.js';
@@ -148,3 +150,5 @@ app.doc('/doc', {
     title: 'Media Sensitivity Detector',
   },
 });
+
+export const handler: Handler = handle(app);
