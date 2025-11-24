@@ -11,7 +11,7 @@ export const defaultDownloadConfig: DownloadConfig = {
   maxSize: 262144000,
 };
 
-export async function downloadUrl(url: URL, settings: DownloadConfig = defaultDownloadConfig): Promise<ArrayBuffer> {
+export async function downloadUrl(url: string, settings: DownloadConfig = defaultDownloadConfig): Promise<ArrayBuffer> {
   let res;
 
   try {

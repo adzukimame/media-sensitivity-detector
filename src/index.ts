@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod/v4-mini';
 import { detectType } from './file-info.js';
+import { downloadUrl } from './download.js';
+import { detectSensitivity } from './detect.js';
 
 export const app = new Hono();
 
@@ -17,8 +19,12 @@ app.get(
   async (ctx) => {
     const url = ctx.req.valid('query').url;
 
-    const buffer = await fetch(url).then(response => response.arrayBuffer());
+    const buffer = await downloadUrl(url);
 
-    return ctx.body((await detectType(buffer)).mime);
+    const type = await detectType(buffer);
+
+    const [sensitive, porn] = await detectSensitivity(buffer, type.mime, 0.5, 0.75, false);
+
+    return ctx.json({ sensitive, porn });
   }
 );
