@@ -1,29 +1,56 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod/v4-mini';
+// import { Hono } from 'hono';
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { detectType } from './file-info.js';
 import { downloadUrl } from './download.js';
 import { detectSensitivity } from './detect.js';
 
-export const app = new Hono();
+export const app = new OpenAPIHono();
 
-app.get('/healthz', (ctx) => {
-  return ctx.body(null, 204);
-});
+app.openapi(
+  createRoute({
+    method: 'get',
+    path: '/healthz',
+    description: 'Retrieve service health status',
+    responses: {
+      204: {
+        description: 'Service is healthy',
+      },
+    },
+  }),
+  (ctx) => {
+    return ctx.body(null, 204);
+  }
+);
 
-app.get(
-  '/api/v1/detect',
-  zValidator('query', z.object({
-    url: z.url({ error: issue => issue.input === undefined ? 'url is required' : 'malformed url' }),
-    sensitiveThreshold: z.optional(z.coerce.number()),
-    sensitiveThresholdForPorn: z.optional(z.coerce.number()),
-    enableDetectionForVideos: z.optional(z.any()),
-  })),
+app.openapi(
+  createRoute({
+    method: 'get',
+    path: '/api/v1/detect',
+    description: 'Detect media sensitivity',
+    request: {
+      query: z.object({
+        url: z.url({ error: issue => issue.input === undefined ? 'url is required' : 'malformed url' }).openapi({ example: 'https://example.test/files/image.webp' }),
+        sensitiveThreshold: z.coerce.number().default(0.5),
+        sensitiveThresholdForPorn: z.coerce.number().default(0.75),
+        enableDetectionForVideos: z.coerce.boolean().default(false),
+      }),
+    },
+    responses: {
+      200: {
+        description: 'Successful response',
+        content: {
+          'application/json': {
+            schema: z.strictObject({
+              sensitive: z.boolean().openapi({ example: false }),
+              porn: z.boolean().openapi({ example: false }),
+            }),
+          },
+        },
+      },
+    },
+  }),
   async (ctx) => {
-    const url = ctx.req.valid('query').url;
-    const sensitiveThreshold = ctx.req.valid('query').sensitiveThreshold ?? 0.5;
-    const sensitiveThresholdForPorn = ctx.req.valid('query').sensitiveThresholdForPorn ?? 0.75;
-    const enableDetectionForVideos = ctx.req.query('enableDetectionForVideos') !== undefined;
+    const { url, sensitiveThreshold, sensitiveThresholdForPorn, enableDetectionForVideos } = ctx.req.valid('query');
 
     const buffer = await downloadUrl(url);
 
@@ -34,3 +61,11 @@ app.get(
     return ctx.json({ sensitive, porn });
   }
 );
+
+app.doc('/doc', {
+  openapi: '3.0.0',
+  info: {
+    version: '0.0.1',
+    title: 'Media Sensitivity Detector',
+  },
+});
