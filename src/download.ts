@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: misskey-dev
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { StatusError } from './status-error.js';
 import { logger } from './logger.js';
 

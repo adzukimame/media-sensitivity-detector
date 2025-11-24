@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: misskey-dev
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { fileTypeFromBuffer } from 'file-type';
 import isSvg from 'is-svg';
 import { logger } from './logger.js';

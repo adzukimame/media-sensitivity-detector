@@ -1,0 +1,42 @@
+Media Sensitivity Detection
+Copyright (c) 2024
+
+This project incorporates code from the following third-party projects:
+
+================================================================================
+
+1. Misskey
+   https://github.com/misskey-dev/misskey
+   Copyright (c) 2014-2025 syuilo and contributors
+   License: AGPL-3.0 (see LICENSES/AGPL-3.0-misskey.txt)
+
+   Files derived from this project (with modifications):
+   - src/ai.ts
+   - src/detect.ts
+
+================================================================================
+
+2. Media Proxy for Misskey
+   https://github.com/misskey-dev/media-proxy
+   Copyright (c) misskey-dev
+   License: AGPL-3.0 (see LICENSES/AGPL-3.0-media-proxy.txt)
+
+   Files derived from this project (with modifications):
+   - src/const.ts
+   - src/download.ts
+   - src/file-info.ts
+   - src/status-error.ts
+
+================================================================================
+
+3. NSFWJS
+   https://github.com/infinitered/nsfwjs
+   Copyright (c) 2019 Infinite Red, Inc.
+   License: MIT (see LICENSES/MIT-nsfwjs.txt)
+
+   Files from this project (unmodified):
+   - nsfw-model/ (TensorFlow.js model files)
+
+================================================================================
+
+For the full text of each license, please see the LICENSES/ directory.

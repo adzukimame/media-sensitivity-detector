@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import * as tf from '@tensorflow/tfjs-node';
