@@ -1,12 +1,25 @@
-# Media Sensitivity Detection
+# Media Sensitivity Detector
 
-Media sensitivity detection API using Hono + nsfwjs. Detects NSFW content in images and videos.
+Media sensitivity detection API using Hono + nsfwjs. Detects NSFW content in images and videos. Use for misskey.
 
 ## Build
 
 ```sh
-docker buildx build --platform linux/amd64 --provenance=false -t media-sensitivity-detector .
+docker buildx build --platform linux/amd64 --provenance=false --tag media-sensitivity-detector --file Dockerfile_lambda .
 ```
+
+## Deploy
+
+First, build image. Then,
+
+```sh
+# replace $region and $id appropriately
+aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $id.dkr.ecr.$region.amazonaws.com
+docker tag media-sensitivity-detector:latest $id.dkr.ecr.$region.amazonaws.com/media-sensitivity-detector:latest
+docker push $id.dkr.ecr.$region.amazonaws.com/media-sensitivity-detector:latest
+```
+
+Finally, create lambda function using uploaded container image.
 
 ## Develop
 

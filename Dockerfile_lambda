@@ -4,10 +4,9 @@ FROM public.ecr.aws/lambda/nodejs:22 AS builder
 WORKDIR /build
 
 # Copy files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY src/ ./src/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 COPY scripts/ ./scripts/
-COPY tsconfig.json ./
+COPY src/ ./src/
 
 # Install pnpm
 RUN npm install -g corepack@latest && corepack enable

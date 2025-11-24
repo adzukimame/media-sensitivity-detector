@@ -8,6 +8,8 @@ import { detectSensitivity } from './detect.js';
 import { StatusError } from './status-error.js';
 import { logger } from './logger.js';
 
+export { logger } from './logger.js';
+
 export const app = new OpenAPIHono();
 
 app.openapi(
