@@ -8,7 +8,7 @@ export type DownloadConfig = {
 
 export const defaultDownloadConfig: DownloadConfig = {
   userAgent: `MisskeyMediaProxy/0.0.24`,
-  maxSize: 262144000,
+  maxSize: 262144000, // 250MB
 };
 
 export async function downloadUrl(url: string, settings: DownloadConfig = defaultDownloadConfig): Promise<ArrayBuffer> {
@@ -19,7 +19,7 @@ export async function downloadUrl(url: string, settings: DownloadConfig = defaul
       headers: {
         'User-Agent': settings.userAgent,
       },
-      signal: AbortSignal.timeout(60 * 1000),
+      signal: AbortSignal.timeout(10 * 1000),
     });
   }
   catch (e) {
