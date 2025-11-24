@@ -17,13 +17,13 @@ app.get(
     url: z.url({ error: issue => issue.input === undefined ? 'url is required' : 'malformed url' }),
     sensitiveThreshold: z.optional(z.coerce.number()),
     sensitiveThresholdForPorn: z.optional(z.coerce.number()),
-    enableDetectionForVideos: z.optional(z.coerce.boolean()),
+    enableDetectionForVideos: z.optional(z.any()),
   })),
   async (ctx) => {
     const url = ctx.req.valid('query').url;
     const sensitiveThreshold = ctx.req.valid('query').sensitiveThreshold ?? 0.5;
     const sensitiveThresholdForPorn = ctx.req.valid('query').sensitiveThresholdForPorn ?? 0.75;
-    const enableDetectionForVideos = ctx.req.valid('query').enableDetectionForVideos ?? false;
+    const enableDetectionForVideos = ctx.req.query('enableDetectionForVideos') !== undefined;
 
     const buffer = await downloadUrl(url);
 

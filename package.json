@@ -15,6 +15,7 @@
     "@stylistic/eslint-plugin": "^5.6.1",
     "@tsconfig/strictest": "^2.0.8",
     "@types/node": "^24.10.1",
+    "@types/tmp": "^0.2.6",
     "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "globals": "^16.5.0",
@@ -24,13 +25,18 @@
   "dependencies": {
     "@hono/node-server": "^1.19.6",
     "@hono/zod-validator": "^0.7.5",
+    "@misskey-dev/sharp-read-bmp": "^1.3.0",
     "@tensorflow/tfjs-node": "4.4.0",
     "async-mutex": "0.5.0",
+    "chokidar": "^3.6.0",
+    "execa": "^9.6.0",
+    "ffmpeg-static": "^5.3.0",
     "file-type": "^21.0.0",
     "hono": "^4.10.6",
     "is-svg": "^6.1.0",
     "nsfwjs": "2.4.2",
     "systeminformation": "5.23.5",
+    "tmp": "^0.2.5",
     "zod": "^4.1.13"
   }
 }

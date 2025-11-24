@@ -14,7 +14,7 @@ let isSupportedCpu: undefined | boolean = undefined;
 let model: nsfw.NSFWJS | null = null;
 const modelLoadMutex: Mutex = new Mutex();
 
-export async function detectSensitive(buffer: ArrayBuffer): Promise<nsfw.predictionType[] | null> {
+export async function detectSensitive(buffer: ArrayBufferLike): Promise<nsfw.predictionType[] | null> {
   try {
     if (isSupportedCpu === undefined) {
       const cpuFlags = await getCpuFlags();

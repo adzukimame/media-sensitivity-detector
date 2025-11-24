@@ -2,3 +2,5 @@ onlyBuiltDependencies:
   - '@tensorflow/tfjs-node'
   - core-js
   - esbuild
+  - ffmpeg-static
+  - sharp
