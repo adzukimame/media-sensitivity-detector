@@ -1,5 +1,6 @@
 import { fileTypeFromBuffer } from 'file-type';
 import isSvg from 'is-svg';
+import { logger } from './logger.js';
 
 const TYPE_OCTET_STREAM = {
   mime: 'application/octet-stream',
@@ -15,9 +16,19 @@ export async function detectType(buffer: ArrayBuffer): Promise<{
   mime: string;
   ext: string | null;
 }> {
-  // Check 0 byte
   const fileSize = buffer.byteLength;
+
+  logger.debug('Starting file type detection', {
+    operation: 'fileInfo:detectType',
+    fileSize,
+  });
+
+  // Check 0 byte
   if (fileSize === 0) {
+    logger.warn('Empty file detected', {
+      operation: 'fileInfo:detectType',
+      result: TYPE_OCTET_STREAM.mime,
+    });
     return TYPE_OCTET_STREAM;
   }
 
@@ -26,25 +37,51 @@ export async function detectType(buffer: ArrayBuffer): Promise<{
   if (type) {
     // XMLはSVGかもしれない
     if (type.mime === 'application/xml' && checkSvg(buffer)) {
+      logger.info('File type detected as SVG (from XML)', {
+        operation: 'fileInfo:detectType',
+        originalMime: type.mime,
+        result: TYPE_SVG.mime,
+      });
       return TYPE_SVG;
     }
 
     if (!isMimeImage(type.mime, 'safe-file')) {
+      logger.info('File type not in safe-file list', {
+        operation: 'fileInfo:detectType',
+        detectedMime: type.mime,
+        result: TYPE_OCTET_STREAM.mime,
+      });
       return TYPE_OCTET_STREAM;
     }
 
+    const finalMime = fixMime(type.mime);
+    logger.info('File type detected', {
+      operation: 'fileInfo:detectType',
+      detectedMime: type.mime,
+      result: finalMime,
+      ext: type.ext,
+    });
     return {
-      mime: fixMime(type.mime),
+      mime: finalMime,
       ext: type.ext,
     };
   }
 
   // 種類が不明でもSVGかもしれない
   if (checkSvg(buffer)) {
+    logger.info('File type detected as SVG (fallback check)', {
+      operation: 'fileInfo:detectType',
+      result: TYPE_SVG.mime,
+    });
     return TYPE_SVG;
   }
 
   // それでも種類が不明なら application/octet-stream にする
+  logger.info('File type unknown', {
+    operation: 'fileInfo:detectType',
+    result: TYPE_OCTET_STREAM.mime,
+    fileSize,
+  });
   return TYPE_OCTET_STREAM;
 }
 
@@ -54,7 +91,11 @@ function checkSvg(buffer: ArrayBuffer) {
     if (size > 1 * 1024 * 1024) return false;
     return isSvg(new TextDecoder().decode(buffer));
   }
-  catch {
+  catch (err) {
+    logger.warn('SVG check failed', {
+      operation: 'fileInfo:checkSvg',
+      ...logger.formatError(err),
+    });
     return false;
   }
 }

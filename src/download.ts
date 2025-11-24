@@ -1,4 +1,5 @@
 import { StatusError } from './status-error.js';
+import { logger } from './logger.js';
 
 export type DownloadConfig = {
   [x: string]: string | number;
@@ -14,6 +15,12 @@ export const defaultDownloadConfig: DownloadConfig = {
 export async function downloadUrl(url: string, settings: DownloadConfig = defaultDownloadConfig): Promise<ArrayBuffer> {
   let res;
 
+  logger.info('Starting download', {
+    operation: 'download:fetch',
+    url,
+    maxSize: settings.maxSize,
+  });
+
   try {
     res = await fetch(url, {
       headers: {
@@ -23,10 +30,23 @@ export async function downloadUrl(url: string, settings: DownloadConfig = defaul
     });
   }
   catch (e) {
+    const isTimeout = e instanceof Error && e.name === 'TimeoutError';
+    logger.error(isTimeout ? 'Download timed out' : 'Download failed', {
+      operation: 'download:fetch',
+      url,
+      isTimeout,
+      ...logger.formatError(e),
+    });
     throw new StatusError('An error occured while fetching content', 500, e as Error);
   }
 
   if (!res.ok) {
+    logger.warn('Download received non-OK status', {
+      operation: 'download:fetch',
+      url,
+      status: res.status,
+      statusText: res.statusText,
+    });
     throw new StatusError(`Target resource could not be fetched (Received status: ${res.status}, target: ${url})`, 404);
   }
 
@@ -34,9 +54,22 @@ export async function downloadUrl(url: string, settings: DownloadConfig = defaul
   if (contentLength != null) {
     const size = Number(contentLength);
     if (size > settings.maxSize) {
+      logger.warn('Download rejected due to size limit', {
+        operation: 'download:fetch',
+        url,
+        contentLength: size,
+        maxSize: settings.maxSize,
+      });
       throw new StatusError(`Max size exceeded (${size} > ${settings.maxSize}) on response`, 400);
     }
   }
 
-  return res.arrayBuffer();
+  const buffer = await res.arrayBuffer();
+  logger.info('Download completed', {
+    operation: 'download:fetch',
+    url,
+    size: buffer.byteLength,
+  });
+
+  return buffer;
 }

@@ -4,6 +4,7 @@ import * as tf from '@tensorflow/tfjs-node';
 import * as nsfw from 'nsfwjs';
 import si from 'systeminformation';
 import { Mutex } from 'async-mutex';
+import { logger } from './logger.js';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -28,8 +29,11 @@ export class AiService {
     this.isSupportedCpu = REQUIRED_CPU_FLAGS.every(required => cpuFlags.includes(required));
 
     if (!this.isSupportedCpu) {
-      // eslint-disable-next-line no-console
-      console.error('CPU does not support required instructions');
+      logger.error('CPU does not support required instructions', {
+        operation: 'ai:init',
+        requiredFlags: REQUIRED_CPU_FLAGS,
+        availableFlags: cpuFlags,
+      });
     }
 
     await this.modelLoadMutex.runExclusive(async () => {
@@ -37,8 +41,16 @@ export class AiService {
     });
 
     if (this.model == null) {
-      // eslint-disable-next-line no-console
-      console.error(`Failed to load model: (file://${_dirname}/../nsfw-model/)`);
+      logger.error('Failed to load NSFW model', {
+        operation: 'ai:init',
+        modelPath: `file://${_dirname}/../nsfw-model/`,
+      });
+    }
+    else {
+      logger.info('NSFW model loaded successfully', {
+        operation: 'ai:init',
+        modelPath: `file://${_dirname}/../nsfw-model/`,
+      });
     }
   }
 
@@ -73,8 +85,10 @@ export class AiService {
       }
     }
     catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('An error occured:', err);
+      logger.error('Failed to detect sensitive content', {
+        operation: 'ai:detectSensitive',
+        ...logger.formatError(err),
+      });
       return null;
     }
   }

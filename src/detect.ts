@@ -8,8 +8,18 @@ import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import { type predictionType } from 'nsfwjs';
 import { AiService } from './ai.js';
 import { isMimeImage } from './file-info.js';
+import { logger } from './logger.js';
 
 export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
+  logger.info('Starting sensitivity detection', {
+    operation: 'detect:sensitivity',
+    mime,
+    bufferSize: buffer.byteLength,
+    sensitiveThreshold,
+    sensitiveThresholdForPorn,
+    analyzeVideo,
+  });
+
   const aiService = await AiService.getInstance();
 
   let sensitive = false;
@@ -29,6 +39,11 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
   }
 
   if (isMimeImage(mime, 'sharp-convertible-image-with-bmp')) {
+    logger.debug('Processing as image', {
+      operation: 'detect:sensitivity',
+      mime,
+    });
+
     const png = await (await sharpBmp(new Uint8Array(buffer), mime))
       .resize(299, 299, {
         withoutEnlargement: false,
@@ -41,17 +56,46 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
     const result = await aiService.detectSensitive(png.buffer);
     if (result) {
       [sensitive, porn] = judgePrediction(result);
+      logger.debug('Image detection result', {
+        operation: 'detect:sensitivity',
+        predictions: result.map(p => ({ className: p.className, probability: p.probability })),
+        sensitive,
+        porn,
+      });
     }
   }
   else if (analyzeVideo && (mime === 'image/apng' || mime.startsWith('video/'))) {
+    logger.info('Processing as video', {
+      operation: 'detect:video',
+      mime,
+      bufferSize: buffer.byteLength,
+    });
+
     const [outDir, disposeOutDir] = await createTempDir();
+    logger.debug('Created temp directory', {
+      operation: 'detect:video',
+      tempDir: outDir,
+    });
+
     try {
       // bufferを一時ファイルに書き出し
       const inputPath = joinPath(outDir, 'input');
       await fs.promises.writeFile(inputPath, new Uint8Array(buffer));
 
       // execaでffmpegを実行
-      if (!ffmpegPath) throw new Error('ffmpeg-static path not found');
+      if (!ffmpegPath) {
+        logger.error('ffmpeg-static path not found', {
+          operation: 'detect:video',
+        });
+        throw new Error('ffmpeg-static path not found');
+      }
+
+      logger.debug('Starting ffmpeg process', {
+        operation: 'detect:video',
+        ffmpegPath,
+        inputPath,
+      });
+
       const ffmpegProcess = execa(ffmpegPath, [
         '-skip_frame', 'nokey', // 可能ならキーフレームのみを取得してほしいとする（そうなるとは限らない）
         '-lowres', '3', // 元の画質でデコードする必要はないので 1/8 画質でデコードしてもよいとする（そうなるとは限らない）
@@ -71,6 +115,7 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
       let frameIndex = 0;
       let targetIndex = 0;
       let nextIndex = 1;
+      let analyzedFrameCount = 0;
       const pendingUnlink = [];
       for await (const path of asyncIterateFrames(outDir, ffmpegProcess)) {
         try {
@@ -84,6 +129,7 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
           const result = await aiService.detectSensitive(frameBuffer.buffer);
           if (result) {
             results.push(judgePrediction(result));
+            analyzedFrameCount++;
           }
         }
         finally {
@@ -93,11 +139,40 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
       await Promise.all(pendingUnlink);
       sensitive = results.filter(x => x[0]).length >= Math.ceil(results.length * sensitiveThreshold);
       porn = results.filter(x => x[1]).length >= Math.ceil(results.length * sensitiveThresholdForPorn);
+
+      logger.info('Video frame analysis completed', {
+        operation: 'detect:video',
+        totalFrames: frameIndex,
+        analyzedFrames: analyzedFrameCount,
+        sensitiveFrames: results.filter(x => x[0]).length,
+        pornFrames: results.filter(x => x[1]).length,
+        sensitive,
+        porn,
+      });
+    }
+    catch (err) {
+      logger.error('Video processing failed', {
+        operation: 'detect:video',
+        mime,
+        ...logger.formatError(err),
+      });
+      throw err;
     }
     finally {
       disposeOutDir();
+      logger.debug('Cleaned up temp directory', {
+        operation: 'detect:video',
+        tempDir: outDir,
+      });
     }
   }
+
+  logger.info('Sensitivity detection completed', {
+    operation: 'detect:sensitivity',
+    mime,
+    sensitive,
+    porn,
+  });
 
   return [sensitive, porn];
 }

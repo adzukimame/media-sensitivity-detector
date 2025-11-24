@@ -3,6 +3,8 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import { detectType } from './file-info.js';
 import { downloadUrl } from './download.js';
 import { detectSensitivity } from './detect.js';
+import { StatusError } from './status-error.js';
+import { logger } from './logger.js';
 
 export const app = new OpenAPIHono();
 
@@ -47,18 +49,95 @@ app.openapi(
           },
         },
       },
+      400: {
+        description: 'Bad request',
+        content: {
+          'application/json': {
+            schema: z.strictObject({
+              error: z.string().openapi({ example: 'Max size exceeded' }),
+            }),
+          },
+        },
+      },
+      404: {
+        description: 'Resource not found',
+        content: {
+          'application/json': {
+            schema: z.strictObject({
+              error: z.string().openapi({ example: 'Target resource could not be fetched' }),
+            }),
+          },
+        },
+      },
+      500: {
+        description: 'Internal server error',
+        content: {
+          'application/json': {
+            schema: z.strictObject({
+              error: z.string().openapi({ example: 'Internal server error' }),
+            }),
+          },
+        },
+      },
     },
   }),
   async (ctx) => {
     const { url, sensitiveThreshold, sensitiveThresholdForPorn, enableDetectionForVideos } = ctx.req.valid('query');
 
-    const buffer = await downloadUrl(url);
+    logger.info('Received detection request', {
+      operation: 'api:detect',
+      url,
+      sensitiveThreshold,
+      sensitiveThresholdForPorn,
+      enableDetectionForVideos,
+    });
 
-    const type = await detectType(buffer);
+    try {
+      const buffer = await downloadUrl(url);
 
-    const [sensitive, porn] = await detectSensitivity(buffer, type.mime, sensitiveThreshold, sensitiveThresholdForPorn, enableDetectionForVideos);
+      const type = await detectType(buffer);
 
-    return ctx.json({ sensitive, porn });
+      const [sensitive, porn] = await detectSensitivity(buffer, type.mime, sensitiveThreshold, sensitiveThresholdForPorn, enableDetectionForVideos);
+
+      logger.info('Detection request completed', {
+        operation: 'api:detect',
+        url,
+        mime: type.mime,
+        sensitive,
+        porn,
+      });
+
+      return ctx.json({ sensitive, porn }, 200);
+    }
+    catch (err) {
+      if (err instanceof StatusError) {
+        logger.warn('Detection request failed with status error', {
+          operation: 'api:detect',
+          url,
+          statusCode: err.statusCode,
+          isClientError: err.isClientError,
+          ...logger.formatError(err),
+        });
+
+        if (err.statusCode === 400) {
+          return ctx.json({ error: err.message }, 400);
+        }
+        else if (err.statusCode === 404) {
+          return ctx.json({ error: err.message }, 404);
+        }
+        else {
+          return ctx.json({ error: 'Internal Server Error' }, 500);
+        }
+      }
+      else {
+        logger.error('Detection request failed with unexpected error', {
+          operation: 'api:detect',
+          url,
+          ...logger.formatError(err),
+        });
+        return ctx.json({ error: 'Internal server error' }, 500);
+      }
+    }
   }
 );
 
