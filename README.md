@@ -13,10 +13,10 @@ docker buildx build --platform linux/amd64 --provenance=false --tag media-sensit
 First, build image. Then,
 
 ```sh
-# replace $region and $id appropriately
-aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $id.dkr.ecr.$region.amazonaws.com
-docker tag media-sensitivity-detector:latest $id.dkr.ecr.$region.amazonaws.com/media-sensitivity-detector:latest
-docker push $id.dkr.ecr.$region.amazonaws.com/media-sensitivity-detector:latest
+# replace $region and $accountId appropriately
+aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $accountId.dkr.ecr.$region.amazonaws.com
+docker tag media-sensitivity-detector:latest $accountId.dkr.ecr.$region.amazonaws.com/media-sensitivity-detector:latest
+docker push $accountId.dkr.ecr.$region.amazonaws.com/media-sensitivity-detector:latest
 ```
 
 Finally, create lambda function using uploaded container image.
