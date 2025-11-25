@@ -7,6 +7,5 @@ serve({
   fetch: app.fetch,
   port: process.env.PORT && !Number.isNaN(Number.parseInt(process.env.PORT)) ? Number.parseInt(process.env.PORT) : 3000,
 }, (info) => {
-  // eslint-disable-next-line no-console
   logger.info(`Server is listening on port ${info.port}`);
 });

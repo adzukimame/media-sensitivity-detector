@@ -5,10 +5,13 @@
 
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+
 import * as tf from '@tensorflow/tfjs-node';
 import * as nsfw from 'nsfwjs';
 import si from 'systeminformation';
 import { Mutex } from 'async-mutex';
+
 import { logger } from './logger.js';
 
 const _filename = fileURLToPath(import.meta.url);
@@ -73,7 +76,7 @@ export class AiService {
     });
   }
 
-  public async detectSensitive(buffer: ArrayBufferLike): Promise<nsfw.predictionType[] | null> {
+  public async detectSensitive(source: ArrayBufferLike | string): Promise<nsfw.predictionType[] | null> {
     try {
       if (!this.isSupportedCpu) {
         return null;
@@ -83,7 +86,7 @@ export class AiService {
         return null;
       }
 
-      const image = tf.node.decodeImage(new Uint8Array(buffer), 3);
+      const image = tf.node.decodeImage(typeof source === 'string' ? await readFile(source) : new Uint8Array(source), 3);
       try {
         const predictions = await this.model.classify(image);
         return predictions;

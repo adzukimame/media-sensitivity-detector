@@ -5,14 +5,16 @@
 
 export class StatusError extends Error {
   public statusCode: number;
+  public statusMessage?: string | undefined;
+  public origin?: Error | undefined;
   public isClientError: boolean;
-  public origin?: Error;
 
-  constructor(message: string, statusCode: number, origin?: Error) {
+  constructor(message: string, statusCode: number, statusMessage?: string, origin?: Error) {
     super(message);
     this.name = 'StatusError';
     this.statusCode = statusCode;
-    this.isClientError = this.statusCode >= 400 && this.statusCode < 500;
-    if (origin) this.origin = origin;
+    this.origin = origin;
+    this.statusMessage = statusMessage;
+    this.isClientError = typeof this.statusCode === 'number' && this.statusCode >= 400 && this.statusCode < 500;
   }
 }

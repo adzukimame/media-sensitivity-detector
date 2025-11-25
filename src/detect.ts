@@ -3,23 +3,24 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import * as fs from 'node:fs';
+import { access, unlink } from 'node:fs/promises';
 import { join as joinPath } from 'node:path';
 import { execa } from 'execa';
 import ffmpegPath from 'ffmpeg-static';
 import { FSWatcher } from 'chokidar';
-import * as tmp from 'tmp';
 import { sharpBmp } from '@misskey-dev/sharp-read-bmp';
 import { type predictionType } from 'nsfwjs';
+
 import { AiService } from './ai.js';
 import { isMimeImage } from './file-info.js';
 import { logger } from './logger.js';
+import { createTempDir } from './create-temp.js';
 
-export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
+export async function detectSensitivity(path: string, mime: string, sensitiveThreshold: number, sensitiveThresholdForPorn: number, analyzeVideo: boolean): Promise<[sensitive: boolean, porn: boolean]> {
   logger.info('Starting sensitivity detection', {
     operation: 'detect:sensitivity',
     mime,
-    bufferSize: buffer.byteLength,
+    // bufferSize: buffer.byteLength,
     sensitiveThreshold,
     sensitiveThresholdForPorn,
     analyzeVideo,
@@ -49,7 +50,7 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
       mime,
     });
 
-    const png = await (await sharpBmp(new Uint8Array(buffer), mime))
+    const png = await (await sharpBmp(path, mime))
       .resize(299, 299, {
         withoutEnlargement: false,
       })
@@ -73,7 +74,7 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
     logger.info('Processing as video', {
       operation: 'detect:video',
       mime,
-      bufferSize: buffer.byteLength,
+      // bufferSize: buffer.byteLength,
     });
 
     const [outDir, disposeOutDir] = await createTempDir();
@@ -83,10 +84,6 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
     });
 
     try {
-      // bufferを一時ファイルに書き出し
-      const inputPath = joinPath(outDir, 'input');
-      await fs.promises.writeFile(inputPath, new Uint8Array(buffer));
-
       // execaでffmpegを実行
       if (!ffmpegPath) {
         logger.error('ffmpeg-static path not found', {
@@ -98,13 +95,13 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
       logger.debug('Starting ffmpeg process', {
         operation: 'detect:video',
         ffmpegPath,
-        inputPath,
+        path,
       });
 
       const ffmpegProcess = execa(ffmpegPath, [
         '-skip_frame', 'nokey', // 可能ならキーフレームのみを取得してほしいとする（そうなるとは限らない）
         '-lowres', '3', // 元の画質でデコードする必要はないので 1/8 画質でデコードしてもよいとする（そうなるとは限らない）
-        '-i', inputPath,
+        '-i', path,
         '-an', // noAudio
         '-vf', [
           'select=eq(pict_type\\,PICT_TYPE_I)', // I-Frame のみをフィルタする（VP9 とかはデコードしてみないとわからないっぽい）
@@ -130,18 +127,16 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
           }
           targetIndex = nextIndex;
           nextIndex += index; // fibonacci sequence によってフレーム数制限を掛ける
-          const frameBuffer = await fs.promises.readFile(path);
-          const result = await aiService.detectSensitive(frameBuffer.buffer);
+          const result = await aiService.detectSensitive(path);
           if (result) {
             results.push(judgePrediction(result));
             analyzedFrameCount++;
           }
         }
         finally {
-          pendingUnlink.push(fs.promises.unlink(path));
+          pendingUnlink.push(unlink(path));
         }
       }
-      await Promise.all(pendingUnlink);
       sensitive = results.filter(x => x[0]).length >= Math.ceil(results.length * sensitiveThreshold);
       porn = results.filter(x => x[1]).length >= Math.ceil(results.length * sensitiveThresholdForPorn);
 
@@ -154,6 +149,8 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
         sensitive,
         porn,
       });
+
+      await Promise.all(pendingUnlink);
     }
     catch (err) {
       logger.error('Video processing failed', {
@@ -180,22 +177,6 @@ export async function detectSensitivity(buffer: ArrayBuffer, mime: string, sensi
   });
 
   return [sensitive, porn];
-}
-
-function createTempDir(): Promise<[string, () => void]> {
-  return new Promise<[string, () => void]>((res, rej) => {
-    tmp.dir(
-      {
-        unsafeCleanup: true,
-      },
-      (e, path, cleanup) => {
-        // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-        if (e) return rej(e);
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
-        res([path, process.env['NODE_ENV'] === 'production' ? cleanup : () => {}]);
-      }
-    );
-  });
 }
 
 async function* asyncIterateFrames(cwd: string, process: ReturnType<typeof execa>): AsyncGenerator<string, void> {
@@ -252,5 +233,5 @@ async function* asyncIterateFrames(cwd: string, process: ReturnType<typeof execa
 }
 
 function exists(path: string): Promise<boolean> {
-  return fs.promises.access(path).then(() => true, () => false);
+  return access(path).then(() => true, () => false);
 }

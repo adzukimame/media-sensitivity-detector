@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { fileTypeFromBuffer } from 'file-type';
+import { stat as fsStat, readFile } from 'node:fs/promises';
+import { fileTypeFromFile } from 'file-type';
 import isSvg from 'is-svg';
 import { logger } from './logger.js';
 
@@ -17,11 +18,15 @@ const TYPE_SVG = {
   ext: 'svg',
 };
 
-export async function detectType(buffer: ArrayBuffer): Promise<{
+async function getFileSize(path: string): Promise<number> {
+  return (await fsStat(path)).size;
+}
+
+export async function detectType(path: string): Promise<{
   mime: string;
   ext: string | null;
 }> {
-  const fileSize = buffer.byteLength;
+  const fileSize = await getFileSize(path);
 
   logger.debug('Starting file type detection', {
     operation: 'fileInfo:detectType',
@@ -37,11 +42,11 @@ export async function detectType(buffer: ArrayBuffer): Promise<{
     return TYPE_OCTET_STREAM;
   }
 
-  const type = await fileTypeFromBuffer(buffer);
+  const type = await fileTypeFromFile(path);
 
   if (type) {
     // XMLはSVGかもしれない
-    if (type.mime === 'application/xml' && checkSvg(buffer)) {
+    if (type.mime === 'application/xml' && await checkSvg(path)) {
       logger.info('File type detected as SVG (from XML)', {
         operation: 'fileInfo:detectType',
         originalMime: type.mime,
@@ -73,7 +78,7 @@ export async function detectType(buffer: ArrayBuffer): Promise<{
   }
 
   // 種類が不明でもSVGかもしれない
-  if (checkSvg(buffer)) {
+  if (await checkSvg(path)) {
     logger.info('File type detected as SVG (fallback check)', {
       operation: 'fileInfo:detectType',
       result: TYPE_SVG.mime,
@@ -90,11 +95,11 @@ export async function detectType(buffer: ArrayBuffer): Promise<{
   return TYPE_OCTET_STREAM;
 }
 
-function checkSvg(buffer: ArrayBuffer) {
+async function checkSvg(path: string) {
   try {
-    const size = buffer.byteLength;
+    const size = await getFileSize(path);
     if (size > 1 * 1024 * 1024) return false;
-    return isSvg(new TextDecoder().decode(buffer));
+    return isSvg(await readFile(path, { encoding: 'utf-8' }));
   }
   catch (err) {
     logger.warn('SVG check failed', {

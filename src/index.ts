@@ -2,6 +2,7 @@ import type { Handler } from 'aws-lambda';
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { handle } from 'hono/aws-lambda';
 
+import { AiService } from './ai.js';
 import { detectType } from './file-info.js';
 import { downloadUrl } from './download.js';
 import { detectSensitivity } from './detect.js';
@@ -9,6 +10,9 @@ import { StatusError } from './status-error.js';
 import { logger } from './logger.js';
 
 export { logger } from './logger.js';
+
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
+AiService.getInstance();
 
 export const app = new OpenAPIHono();
 
@@ -96,12 +100,17 @@ app.openapi(
       enableDetectionForVideos,
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    let cleanup: () => void = () => {};
+
     try {
-      const buffer = await downloadUrl(url);
+      const downloadResult = await downloadUrl(url);
+      const path = downloadResult[0];
+      cleanup = downloadResult[1];
 
-      const type = await detectType(buffer);
+      const type = await detectType(path);
 
-      const [sensitive, porn] = await detectSensitivity(buffer, type.mime, sensitiveThreshold, sensitiveThresholdForPorn, enableDetectionForVideos);
+      const [sensitive, porn] = await detectSensitivity(path, type.mime, sensitiveThreshold, sensitiveThresholdForPorn, enableDetectionForVideos);
 
       logger.info('Detection request completed', {
         operation: 'api:detect',
@@ -141,6 +150,9 @@ app.openapi(
         });
         return ctx.json({ error: 'Internal server error' }, 500);
       }
+    }
+    finally {
+      cleanup();
     }
   }
 );
