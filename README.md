@@ -50,7 +50,7 @@ This project incorporates code from the following open-source projects:
 ### Media Proxy for Misskey
 - **Source**: [misskey-dev/media-proxy](https://github.com/misskey-dev/media-proxy)
 - **License**: AGPL-3.0
-- **Files** (modified): [const.ts](src/const.ts), [download.ts](src/download.ts), [file-info.ts](src/file-info.ts), [status-error.ts](src/status-error.ts)
+- **Files** (modified): [const.ts](src/const.ts), [download.ts](src/download.ts), [file-info.ts](src/file-info.ts), [status-error.ts](src/status-error.ts), [create-temp.ts](src/create-temp.ts)
 
 ### NSFWJS
 - **Source**: [infinitered/nsfwjs](https://github.com/infinitered/nsfwjs)
@@ -61,6 +61,6 @@ For full license texts, see the [LICENSES/](LICENSES/) directory. For detailed a
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0-only).
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
 See [LICENSE](LICENSE) for the full license text.
