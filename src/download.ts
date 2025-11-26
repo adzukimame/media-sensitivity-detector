@@ -98,19 +98,18 @@ export async function downloadUrl(url: string, settings: DownloadConfig = defaul
     }
   });
 
-  try {
-    await pipeline(readStream, writeStream);
+  return pipeline(readStream, writeStream)
+    .then(() => {
+      logger.info('Download completed', {
+        operation: 'download:fetch',
+        url,
+        size: bytesRead,
+      });
 
-    logger.info('Download completed', {
-      operation: 'download:fetch',
-      url,
-      size: bytesRead,
+      return [tempPath, cleanup] as [string, () => void];
+    })
+    .catch((err: unknown) => {
+      cleanup();
+      throw err instanceof Error ? err : new Error('Unknown error detected', { cause: err });
     });
-
-    return [tempPath, cleanup];
-  }
-  catch (err) {
-    cleanup();
-    throw err instanceof Error ? err : new Error('Unknown error detected', { cause: err });
-  }
 }

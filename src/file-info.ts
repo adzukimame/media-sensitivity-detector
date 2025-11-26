@@ -95,18 +95,18 @@ export async function detectType(path: string): Promise<{
 }
 
 async function checkSvg(path: string) {
-  try {
-    const size = await getFileSize(path);
-    if (size > 1 * 1024 * 1024) return false;
-    return isSvg(await readFile(path, { encoding: 'utf-8' }));
-  }
-  catch (err) {
-    logger.warn('SVG check failed', {
-      operation: 'fileInfo:checkSvg',
-      ...logger.formatError(err),
+  return getFileSize(path)
+    .then((size) => {
+      if (size > 1 * 1024 * 1024) return false;
+      return readFile(path, { encoding: 'utf-8' }).then(isSvg);
+    })
+    .catch((err: unknown) => {
+      logger.warn('SVG check failed', {
+        operation: 'fileInfo:checkSvg',
+        ...logger.formatError(err),
+      });
+      return false;
     });
-    return false;
-  }
 }
 
 import { FILE_TYPE_BROWSERSAFE } from './const.js';
