@@ -76,23 +76,16 @@ export class AiService {
   }
 
   public async detectSensitive(source: ArrayBufferLike | string): Promise<nsfw.predictionType[] | null> {
+    if (!this.isSupportedCpu) return null;
+
+    if (this.model == null) return null;
+
     try {
-      if (!this.isSupportedCpu) {
-        return null;
-      }
-
-      if (this.model == null) {
-        return null;
-      }
-
       const image = tf.node.decodeImage(typeof source === 'string' ? await readFile(source) : new Uint8Array(source), 3);
-      try {
-        const predictions = await this.model.classify(image);
-        return predictions;
-      }
-      finally {
-        image.dispose();
-      }
+      return await this.model.classify(image)
+        .finally(() => {
+          image.dispose();
+        });
     }
     catch (err) {
       logger.error('Failed to detect sensitive content', {

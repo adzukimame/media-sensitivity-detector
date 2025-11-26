@@ -115,24 +115,25 @@ export async function detectSensitivity(path: string, mime: string, sensitiveThr
       let targetIndex = 0;
       let nextIndex = 1;
       let analyzedFrameCount = 0;
-      const pendingUnlink = [];
+      const pendingUnlink: Promise<void>[] = [];
       for await (const path of asyncIterateFrames(outDir, ffmpegProcess)) {
-        try {
-          const index = frameIndex++;
-          if (index !== targetIndex) {
-            continue;
-          }
-          targetIndex = nextIndex;
-          nextIndex += index; // fibonacci sequence によってフレーム数制限を掛ける
-          const result = await aiService.detectSensitive(path);
-          if (result) {
-            results.push(judgePrediction(result));
-            analyzedFrameCount++;
-          }
+        const index = frameIndex++;
+        if (index !== targetIndex) {
+          continue;
         }
-        finally {
-          pendingUnlink.push(unlink(path));
-        }
+        targetIndex = nextIndex;
+        nextIndex += index; // fibonacci sequence によってフレーム数制限を掛ける
+
+        await aiService.detectSensitive(path)
+          .then((result) => {
+            if (result) {
+              results.push(judgePrediction(result));
+              analyzedFrameCount++;
+            }
+          })
+          .finally(() => {
+            pendingUnlink.push(unlink(path));
+          });
       }
       sensitive = results.filter(x => x[0]).length >= Math.ceil(results.length * sensitiveThreshold);
       porn = results.filter(x => x[1]).length >= Math.ceil(results.length * sensitiveThresholdForPorn);
