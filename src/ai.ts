@@ -23,7 +23,7 @@ export class AiService {
   private static instance: AiService | undefined = undefined;
   private static instanceMutex: Mutex = new Mutex();
 
-  private isSupportedCpu: undefined | boolean = undefined;
+  private isSupportedCpu = false;
 
   private model: nsfw.NSFWJS | null = null;
   private modelLoadMutex: Mutex = new Mutex();
@@ -34,9 +34,10 @@ export class AiService {
 
   private async init() {
     // public.ecr.aws/lambda/nodejs:22 イメージでCPUフラグが全く検出できない
+    // とりあえず常にサポートされているとしておく
+    this.isSupportedCpu = true;
     // const cpuFlags = await this.getCpuFlags();
     // this.isSupportedCpu = REQUIRED_CPU_FLAGS.every(required => cpuFlags.includes(required));
-
     // if (!this.isSupportedCpu) {
     //   logger.error('CPU does not support required instructions', {
     //     operation: 'ai:init',
@@ -44,8 +45,6 @@ export class AiService {
     //     availableFlags: cpuFlags,
     //   });
     // }
-
-    this.isSupportedCpu = true;
 
     await this.modelLoadMutex.runExclusive(async () => {
       this.model ??= await nsfw.load(`file://${_dirname}/../nsfw-model/`, { size: 299 });

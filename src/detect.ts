@@ -20,7 +20,6 @@ export async function detectSensitivity(path: string, mime: string, sensitiveThr
   logger.info('Starting sensitivity detection', {
     operation: 'detect:sensitivity',
     mime,
-    // bufferSize: buffer.byteLength,
     sensitiveThreshold,
     sensitiveThresholdForPorn,
     analyzeVideo,
@@ -74,7 +73,6 @@ export async function detectSensitivity(path: string, mime: string, sensitiveThr
     logger.info('Processing as video', {
       operation: 'detect:video',
       mime,
-      // bufferSize: buffer.byteLength,
     });
 
     const [outDir, disposeOutDir] = await createTempDir();
@@ -84,7 +82,6 @@ export async function detectSensitivity(path: string, mime: string, sensitiveThr
     });
 
     try {
-      // execaでffmpegを実行
       if (!ffmpegPath) {
         logger.error('ffmpeg-static path not found', {
           operation: 'detect:video',
