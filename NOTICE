@@ -26,6 +26,7 @@ This project incorporates code from the following third-party projects:
    - src/download.ts
    - src/file-info.ts
    - src/status-error.ts
+   - src/create-temp.ts
 
 ================================================================================
 
