@@ -33,7 +33,6 @@ export async function detectType(path: string): Promise<{
     fileSize,
   });
 
-  // Check 0 byte
   if (fileSize === 0) {
     logger.warn('Empty file detected', {
       operation: 'fileInfo:detectType',
