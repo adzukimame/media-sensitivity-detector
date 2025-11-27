@@ -4,7 +4,7 @@ import { handle } from 'hono/aws-lambda';
 
 import { AiService } from './ai.js';
 import { detectType } from './file-info.js';
-import { downloadUrl, DOWNLOAD_USER_AGENT } from './download.js';
+import { downloadUrl, defaultDownloadConfig } from './download.js';
 import { detectSensitivity } from './detect.js';
 import { StatusError } from './status-error.js';
 import { logger } from './logger.js';
@@ -101,7 +101,7 @@ app.openapi(
     });
 
     const userAgent = ctx.req.header('User-Agent');
-    if (userAgent === DOWNLOAD_USER_AGENT) {
+    if (userAgent === defaultDownloadConfig.userAgent) {
       logger.warn('Loop detected: request blocked due to User-Agent', {
         operation: 'api:detect',
         url,
