@@ -4,7 +4,7 @@ import { handle } from 'hono/aws-lambda';
 
 import { AiService } from './ai.js';
 import { detectType } from './file-info.js';
-import { downloadUrl } from './download.js';
+import { downloadUrl, DOWNLOAD_USER_AGENT } from './download.js';
 import { detectSensitivity } from './detect.js';
 import { StatusError } from './status-error.js';
 import { logger } from './logger.js';
@@ -99,6 +99,28 @@ app.openapi(
       sensitiveThresholdForPorn,
       enableDetectionForVideos,
     });
+
+    const userAgent = ctx.req.header('User-Agent');
+    if (userAgent === DOWNLOAD_USER_AGENT) {
+      logger.warn('Loop detected: request blocked due to User-Agent', {
+        operation: 'api:detect',
+        url,
+        userAgent,
+      });
+      return ctx.json({ error: 'Loop detected' }, 400);
+    }
+
+    const requestHost = ctx.req.header('Host');
+    const targetUrl = new URL(url);
+    if (requestHost && targetUrl.host === requestHost) {
+      logger.warn('Loop detected: self-referential request blocked', {
+        operation: 'api:detect',
+        url,
+        requestHost,
+        targetHost: targetUrl.host,
+      });
+      return ctx.json({ error: 'Loop detected' }, 400);
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     let cleanup: () => void = () => {};
