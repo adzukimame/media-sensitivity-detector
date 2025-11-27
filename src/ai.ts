@@ -17,7 +17,7 @@ import { logger } from './logger.js';
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 
-// const REQUIRED_CPU_FLAGS = ['avx2', 'fma'];
+const REQUIRED_CPU_FLAGS = ['avx2', 'fma'];
 
 export class AiService {
   private static instance: AiService | undefined = undefined;
@@ -33,18 +33,24 @@ export class AiService {
   }
 
   private async init() {
-    // public.ecr.aws/lambda/nodejs:22 イメージでCPUフラグが全く検出できない
-    // とりあえず常にサポートされているとしておく
-    this.isSupportedCpu = true;
-    // const cpuFlags = await this.getCpuFlags();
-    // this.isSupportedCpu = REQUIRED_CPU_FLAGS.every(required => cpuFlags.includes(required));
-    // if (!this.isSupportedCpu) {
-    //   logger.error('CPU does not support required instructions', {
-    //     operation: 'ai:init',
-    //     requiredFlags: REQUIRED_CPU_FLAGS,
-    //     availableFlags: cpuFlags,
-    //   });
-    // }
+    const cpuFlags = await this.getCpuFlags();
+    this.isSupportedCpu = REQUIRED_CPU_FLAGS.every(required => cpuFlags.includes(required));
+
+    if (!this.isSupportedCpu && process.env['SKIP_CPUFLAGS_CHECK'] !== undefined) {
+      logger.info(`CPU does not support required instructions but check result will be ignored and operations will continue because SKIP_CPUFLAGS_CHECK environment variable was set`, {
+        operation: 'ai:init',
+        requiredFlags: REQUIRED_CPU_FLAGS,
+        availableFlags: cpuFlags,
+      });
+      this.isSupportedCpu = true;
+    }
+    else if (!this.isSupportedCpu) {
+      logger.error('CPU does not support required instructions', {
+        operation: 'ai:init',
+        requiredFlags: REQUIRED_CPU_FLAGS,
+        availableFlags: cpuFlags,
+      });
+    }
 
     await this.modelLoadMutex.runExclusive(async () => {
       this.model ??= await nsfw.load(`file://${_dirname}/../nsfw-model/`, { size: 299 });
