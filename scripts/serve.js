@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
 
-// @ts-ignore
+// @ts-expect-error types are not preserved in built bundle
 const { app, logger } = await import('../built/index.js');
 
 serve({
